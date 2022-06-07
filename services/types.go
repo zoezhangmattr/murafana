@@ -28,7 +28,7 @@ type Dashboard struct {
 	Time                 map[string]interface{} `json:"time"`
 	Editable             bool                   `json:"editable"`
 	Annotations          map[string]interface{} `json:"annotations"`
-	Refresh              string                 `json:"refresh"`
+	Refresh              interface{}            `json:"refresh"`
 	Version              int64                  `json:"version"`
 	SchemaVersion        int64                  `json:"schemaVersion"`
 	Panels               []interface{}          `json:"panels"`
