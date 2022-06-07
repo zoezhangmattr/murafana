@@ -12,7 +12,7 @@ export GRAFANA_URL="https://xxxx"
 ```
 * run command
 ```sh
-go run main.go
-go run main.go -uid AWSWAFV2a
-go run main.go -download-list enabled
+go run main.go -mode download-list
+go run main.go -mode download-dashboard -uid AWSWAFV2a
+go run main.go -mode download-dashboards
 ```

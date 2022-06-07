@@ -11,28 +11,33 @@ import (
 )
 
 func main() {
+	mode := flag.String("mode", "", "what task you want to run")
 	uid := flag.String("uid", "", "download specific dashboard uid to yaml file")
-	dlist := flag.String("download-list", "", "download dashboard to yaml file if enabled")
 	flag.Parse()
-	if len(*uid) > 0 {
-		c := services.New()
-		err := c.GetDashboardByUID(*uid)
-		if err != nil {
-			logger.Error(err)
+	switch *mode {
+	case "download-dashboard":
+		if len(*uid) > 0 {
+			c := services.New()
+			err := c.GetDashboardByUID(*uid)
+			if err != nil {
+				logger.Error(err)
+			}
+			return
+		} else {
+			logger.Error("uid is required")
 		}
-		return
-	}
-	if len(*dlist) > 0 {
+	case "download-list":
 		err := DownloadDashboardList()
 		if err != nil {
 			logger.Error(err)
 		}
-		return
-	}
-
-	err := DownloadAllDashboards()
-	if err != nil {
-		logger.Error(err)
+	case "download-dashboards":
+		err := DownloadAllDashboards()
+		if err != nil {
+			logger.Error(err)
+		}
+	default:
+		logger.Error("unknown mode")
 	}
 }
 
