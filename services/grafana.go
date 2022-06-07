@@ -1,6 +1,7 @@
 package services
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -29,6 +30,7 @@ type client struct {
 type ServiceIntf interface {
 	ListDashboards(...string) ([]string, error)
 	GetDashboardByUID(string) error
+	ImportDashboardFromJson(string, []byte) error
 }
 
 func New() ServiceIntf {
@@ -53,7 +55,7 @@ func (c *client) GetDashboardByUID(uid string) error {
 	uri := c.config.GrafanaHost + "/api/dashboards/uid/" + uid
 	req, err := http.NewRequestWithContext(context.Background(), "GET", uri, nil)
 
-	result := map[string]interface{}{}
+	result := DashboardMeta{}
 	if err != nil {
 		logger.WithFields(logger.Fields{
 			"url":   uri,
@@ -72,7 +74,7 @@ func (c *client) GetDashboardByUID(uid string) error {
 	logger.WithFields(logger.Fields{
 		"url": uri,
 	}).Info("request succeed")
-	utils.LoadToJson(result, "dashboard-"+uid+".json")
+	utils.LoadToJson(result.Dashboard, "dashboard-"+uid+".json")
 	return nil
 }
 
@@ -103,7 +105,6 @@ func (c *client) ListDashboards(download ...string) ([]string, error) {
 		"url":   uri,
 		"count": len(result),
 	}).Info("request succeed.")
-	// utils.PrintOutDashboardObject(result, DBLTemplat)
 	if len(download) > 0 && download[0] == "enabled" {
 		utils.LoadToYaml(result, "dashboards.yaml")
 	}
@@ -114,6 +115,58 @@ func (c *client) ListDashboards(download ...string) ([]string, error) {
 	}
 
 	return uids, nil
+}
+
+// ImportDashboardFromJson use json data to import dashboard
+func (c *client) ImportDashboardFromJson(name string, data []byte) error {
+	uri := c.config.GrafanaHost + "/api/dashboards/import"
+
+	ds := Dashboard{}
+	err := json.Unmarshal(data, &ds)
+	// customize dashboard name
+	if len(name) > 0 {
+		ds.Title = name
+	}
+	// we want to import so set id to null
+	ds.Id = nil
+	if err != nil {
+		logger.Error("unmarshal failed")
+		return err
+	}
+
+	payload := DashboardImportBody{
+		Dashboard: ds,
+	}
+
+	pm, err := json.Marshal(payload)
+	if err != nil {
+		logger.Error("payload marshal failed")
+		return err
+	}
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodPost, uri, bytes.NewBuffer(pm))
+	if err != nil {
+		logger.WithFields(logger.Fields{
+			"url":   uri,
+			"error": err,
+		}).Errorf("request failed.")
+		return err
+	}
+
+	var result interface{}
+	err = c.DoRequest(c.doer, req, &result)
+	if err != nil {
+		logger.WithFields(logger.Fields{
+			"url":   uri,
+			"error": err,
+		}).Errorf("request failed.")
+		return err
+	}
+	logger.WithFields(logger.Fields{
+		"url": uri,
+	}).Info("request succeed.")
+
+	return nil
+
 }
 
 // DoRequest sends http request
@@ -142,11 +195,3 @@ func (c *client) DoRequest(doer HTTPDoer, req *http.Request, dst interface{}) er
 
 	return nil
 }
-
-var DBLTemplat string = `
-List:
------------
-{{ range $dashboards := . -}}
-{{ $dashboards }}
-{{ end -}}
-`

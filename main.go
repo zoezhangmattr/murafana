@@ -3,6 +3,8 @@ package main
 import (
 	"flag"
 	"fmt"
+	"io/ioutil"
+	"os"
 	"sync"
 
 	logger "github.com/sirupsen/logrus"
@@ -13,11 +15,13 @@ import (
 func main() {
 	mode := flag.String("mode", "", "what task you want to run")
 	uid := flag.String("uid", "", "download specific dashboard uid to yaml file")
+	jfp := flag.String("file-path", "", "dashboard json file path")
+	dn := flag.String("name", "", "dashboard name used for import")
 	flag.Parse()
+	c := services.New()
 	switch *mode {
 	case "download-dashboard":
 		if len(*uid) > 0 {
-			c := services.New()
 			err := c.GetDashboardByUID(*uid)
 			if err != nil {
 				logger.Error(err)
@@ -35,6 +39,23 @@ func main() {
 		err := DownloadAllDashboards()
 		if err != nil {
 			logger.Error(err)
+		}
+	case "import-dashboard":
+		if len(*jfp) == 0 {
+			logger.Error("dashboard json file path is required")
+		}
+		d, err := os.Open(*jfp)
+		if err != nil {
+			logger.Error("read file data failed")
+		}
+		defer d.Close()
+		db, err := ioutil.ReadAll(d)
+		if err != nil {
+			logger.Error("read bytes failed")
+		}
+		err = c.ImportDashboardFromJson(*dn, db)
+		if err != nil {
+			logger.Error("import failed")
 		}
 	default:
 		logger.Error("unknown mode")
