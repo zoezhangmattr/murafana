@@ -72,7 +72,7 @@ func (c *client) GetDashboardByUID(uid string) error {
 	logger.WithFields(logger.Fields{
 		"url": uri,
 	}).Info("request succeed")
-	utils.LoadToYaml(result, "dashboard-"+uid+".yaml")
+	utils.LoadToJson(result, "dashboard-"+uid+".json")
 	return nil
 }
 
